@@ -91,30 +91,43 @@ function rateLimit({ windowMs, max, keyFn }) {
   };
 }
 
-// ---------- Sessions admin (en mémoire, simples) ----------
-
-const adminSessions = new Map(); // token -> expiry timestamp
+// ---------- Sessions admin (stateless, compatibles Vercel) ----------
+// Une session ne doit pas dépendre de la mémoire d'une seule instance
+// Serverless : chaque requête peut arriver sur une instance différente.
 const ADMIN_SESSION_TTL_MS = 12 * 60 * 60 * 1000; // 12h
 
+function adminSigningSecret() {
+  return String(process.env.COOKIE_SECRET || 'outlaw-mordrex-cookie-secret-change-me');
+}
+
+function signAdminPayload(payload) {
+  return crypto.createHmac('sha256', adminSigningSecret()).update(payload).digest('hex');
+}
+
 function createAdminSession() {
-  const token = newToken();
-  adminSessions.set(token, Date.now() + ADMIN_SESSION_TTL_MS);
-  return token;
+  const payload = `${Date.now() + ADMIN_SESSION_TTL_MS}.${newToken()}`;
+  return `${payload}.${signAdminPayload(payload)}`;
 }
 
 function isAdminSessionValid(token) {
   if (!token) return false;
-  const expiry = adminSessions.get(token);
-  if (!expiry) return false;
-  if (Date.now() > expiry) {
-    adminSessions.delete(token);
+  const parts = String(token).split('.');
+  if (parts.length !== 3) return false;
+  const [expires, nonce, signature] = parts;
+  const payload = `${expires}.${nonce}`;
+  if (!/^\d+$/.test(expires) || Date.now() > Number(expires)) return false;
+  const expected = signAdminPayload(payload);
+  try {
+    const a = Buffer.from(signature, 'hex');
+    const b = Buffer.from(expected, 'hex');
+    return a.length === b.length && crypto.timingSafeEqual(a, b);
+  } catch (_) {
     return false;
   }
-  return true;
 }
 
-function destroyAdminSession(token) {
-  adminSessions.delete(token);
+function destroyAdminSession(_token) {
+  // Session stateless : l'expiration du cookie côté navigateur suffit.
 }
 
 module.exports = {

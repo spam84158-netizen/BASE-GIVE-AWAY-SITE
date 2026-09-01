@@ -1,0 +1,21 @@
+{
+  "settings": {
+    "giveawayTitle": "OUTLAW MORDREX",
+    "giveawayTagline": "Rejoins la traque. Récolte des coins. Décroche ta récompense.",
+    "giveawayStatus": "active",
+    "giveawayEndsAt": null,
+    "whatsappChannelUrl": "",
+    "welcomeBonusEnabled": true,
+    "welcomeBonusAmount": 5,
+    "referralBonusAmount": 8
+  },
+  "rewards": [],
+  "participants": [],
+  "referrals": [],
+  "coinTransactions": [],
+  "winners": [],
+  "auditLog": [],
+  "counters": {
+    "participantNumber": 0
+  }
+}
