@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Récompense — OUTLAW MORDREX</title>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">OUTLAW <span>MORDREX</span></div>
+  <nav><a href="/rewards.html">← Récompenses</a><a href="/admin/">Admin</a></nav>
+</div>
+
+<div class="wrap" id="content">
+  <div class="skeleton" style="height:220px;"></div>
+</div>
+
+<script src="/js/api.js"></script>
+<script>
+(async function () {
+  const params = new URLSearchParams(window.location.search);
+  const id = params.get('id');
+  const content = document.getElementById('content');
+  if (!id) { content.innerHTML = '<div class="empty-state">Récompense introuvable.</div>'; return; }
+
+  try {
+    const me = await api('/api/participants/me');
+    window.location.href = '/space.html';
+    return;
+  } catch (e) { /* pas encore inscrit */ }
+
+  try {
+    const r = await api('/api/rewards/' + encodeURIComponent(id));
+    content.innerHTML = `
+      <div class="panel" style="margin-top:20px;">
+        ${r.image ? `<img src="${escapeHtml(r.image)}" style="width:100%;border-radius:10px;margin-bottom:16px;max-height:220px;object-fit:cover;">` : ''}
+        <div class="badge ${r.status}">${r.status === 'completed' ? 'TIRAGE EFFECTUÉ' : 'EN COURS'}</div>
+        <h1 style="font-family:'Rye',serif;font-weight:400;font-size:26px;margin:12px 0 6px;">${escapeHtml(r.name)}</h1>
+        <p class="muted">${escapeHtml(r.description || 'Aucune description fournie.')}</p>
+        ${r.conditions ? `<p class="muted"><strong style="color:var(--bone);">Conditions :</strong> ${escapeHtml(r.conditions)}</p>` : ''}
+
+        <div style="display:flex;justify-content:space-between;align-items:center;margin:20px 0 4px;">
+          <span class="muted">Objectif</span>
+          <span class="coin-tag">${r.requiredCoins} COINS</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+          <span class="muted">Parrainage</span>
+          <span style="color:var(--success);font-weight:600;">+${r.referralBonus} COINS / participant validé</span>
+        </div>
+        <p class="muted">${r.participantsCount} participant(s) sur cette récompense · ${r.winnersCount} gagnant(s) prévu(s)</p>
+      </div>
+      <a class="btn btn-primary" style="margin-top:16px;" href="/register.html?reward=${encodeURIComponent(r.id)}">PARTICIPER À CETTE RÉCOMPENSE</a>
+    `;
+  } catch (e) {
+    content.innerHTML = '<div class="empty-state">Cette récompense n\'existe pas ou n\'est plus disponible.</div>';
+  }
+})();
+</script>
+</body>
+</html>

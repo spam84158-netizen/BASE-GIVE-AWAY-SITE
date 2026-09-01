@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>OUTLAW MORDREX — Giveaway</title>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">OUTLAW <span>MORDREX</span></div>
+  <nav>
+    <a href="/index.html" class="active">Accueil</a>
+    <a href="/participants.html">Participants</a>
+    <a href="/leaderboard.html">Classement</a>
+    <a href="/admin/">Admin</a>
+  </nav>
+</div>
+
+<div class="wrap">
+  <div class="hero">
+    <div class="hero-seal">GIVEAWAY SYSTEM</div>
+    <h1 id="title">OUTLAW MORDREX</h1>
+    <p class="tagline" id="tagline">Chargement…</p>
+    <div id="countdown-holder"></div>
+  </div>
+
+  <div class="stat-grid" id="stat-grid">
+    <div class="stat-card"><div class="num">—</div><div class="lbl">Participants</div></div>
+    <div class="stat-card"><div class="num">—</div><div class="lbl">Récompenses</div></div>
+    <div class="stat-card"><div class="num">—</div><div class="lbl">Parrainages</div></div>
+    <div class="stat-card"><div class="num" id="status-num">—</div><div class="lbl">Statut</div></div>
+  </div>
+
+  <div id="cta-primary">
+    <a class="btn btn-primary" href="/rewards.html">PARTICIPER</a>
+  </div>
+  <a class="btn btn-outline" href="/rewards.html">VOIR LES RÉCOMPENSES</a>
+  <a class="btn btn-outline" href="/participants.html">VOIR LES PARTICIPANTS</a>
+  <a class="btn btn-outline" href="/admin/">ACCÈS ADMINISTRATEUR</a>
+
+  <p class="muted center" style="margin-top:22px;">
+    Déjà inscrit sur un autre appareil ? <a href="/recover.html" style="color:var(--brass);text-decoration:underline;">Récupérer mon espace</a>
+  </p>
+</div>
+
+<script src="/js/api.js"></script>
+<script>
+(async function () {
+  try {
+    const stats = await api('/api/stats');
+    document.getElementById('title').textContent = stats.title || 'OUTLAW MORDREX';
+    document.getElementById('tagline').textContent = stats.tagline || '';
+    document.title = (stats.title || 'OUTLAW MORDREX') + ' — Giveaway';
+
+    const cards = document.querySelectorAll('#stat-grid .stat-card .num');
+    cards[0].textContent = stats.totalParticipants;
+    cards[1].textContent = stats.totalRewards;
+    cards[2].textContent = stats.totalReferrals;
+    const statusMap = { active: 'EN COURS', paused: 'EN PAUSE', ended: 'TERMINÉ' };
+    cards[3].textContent = statusMap[stats.status] || stats.status.toUpperCase();
+
+    if (stats.endsAt) {
+      const holder = document.getElementById('countdown-holder');
+      function render() {
+        const diff = new Date(stats.endsAt).getTime() - Date.now();
+        if (diff <= 0) { holder.innerHTML = '<div class="countdown">TERMINÉ<span class="lbl">Le tirage arrive</span></div>'; return; }
+        const d = Math.floor(diff / 86400000);
+        const h = Math.floor((diff % 86400000) / 3600000);
+        const m = Math.floor((diff % 3600000) / 60000);
+        holder.innerHTML = `<div class="countdown">${d}j ${h}h ${m}min<span class="lbl">avant la fin du giveaway</span></div>`;
+      }
+      render();
+      setInterval(render, 60000);
+    }
+  } catch (e) {
+    toast('Impossible de charger les statistiques.', 'error');
+  }
+
+  // Si un profil existe déjà (cookie de session), on saute la sélection de récompense.
+  try {
+    await api('/api/participants/me');
+    document.getElementById('cta-primary').innerHTML = '<a class="btn btn-primary" href="/space.html">MON ESPACE</a>';
+  } catch (e) { /* pas encore inscrit — comportement normal */ }
+})();
+</script>
+</body>
+</html>
