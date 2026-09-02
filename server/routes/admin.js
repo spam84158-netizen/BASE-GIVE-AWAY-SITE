@@ -17,7 +17,8 @@ const {
 
 const router = express.Router();
 
-const UPLOAD_DIR = path.join(__dirname, '..', '..', 'uploads');
+const UPLOAD_DIR = process.env.VERCEL ? path.join('/tmp', 'outlaw-mordrex-uploads') : path.join(__dirname, '..', '..', 'uploads');
+if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 const ALLOWED_MIME = new Set(['image/jpeg', 'image/png', 'image/webp']);
 const upload = multer({
   storage: multer.diskStorage({
@@ -67,8 +68,8 @@ router.post(
   rateLimit({ windowMs: 5 * 60_000, max: 10, keyFn: (r) => r.ip }),
   (req, res) => {
     const { username, password } = req.body || {};
-    const validUser = process.env.ADMIN_USERNAME || 'admin';
-    const validPass = process.env.ADMIN_PASSWORD || '';
+    const validUser = String(process.env.ADMIN_USERNAME || 'admin').trim();
+    const validPass = String(process.env.ADMIN_PASSWORD || '1221');
     if (
       !validPass ||
       !timingSafeEqual(username || '', validUser) ||

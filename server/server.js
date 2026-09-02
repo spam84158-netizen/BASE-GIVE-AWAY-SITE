@@ -29,11 +29,12 @@ app.use(express.urlencoded({ extended: true }));
 
 // Dossiers statiques
 app.use(express.static(path.join(__dirname, '..', 'public')));
-const UPLOAD_DIR = path.join(__dirname, '..', 'uploads');
+const UPLOAD_DIR = process.env.VERCEL ? path.join('/tmp', 'outlaw-mordrex-uploads') : path.join(__dirname, '..', 'uploads');
 if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 app.use('/uploads', express.static(UPLOAD_DIR));
 
 // API
+app.get('/api/health', (req, res) => res.json({ ok: true, service: 'OUTLAW MORDREX GIVEAWAY' }));
 app.use('/api', publicRoutes);
 app.use('/api/participants', participantRoutes);
 app.use('/api/admin', adminRoutes);
@@ -49,9 +50,11 @@ app.get(
     if (referrer) {
       setCookie(res, 'mx_ref', code, { maxAgeSeconds: 60 * 60 * 24 * 30, httpOnly: false });
     }
-    const url = data.settings.whatsappChannelUrl;
-    if (url) return res.redirect(url);
-    return res.redirect('/?ref=' + encodeURIComponent(code));
+    // Le parrain est mémorisé dans le cookie avant l'inscription.
+    // On envoie ensuite directement vers le parcours public des récompenses.
+    // L'URL WhatsApp reste configurable dans l'Admin et peut être utilisée
+    // ailleurs dans l'interface, mais ne doit pas interrompre l'inscription.
+    return res.redirect('/rewards.html?ref=' + encodeURIComponent(code));
   }
 );
 

@@ -91,21 +91,24 @@ function rateLimit({ windowMs, max, keyFn }) {
   };
 }
 
-// ---------- Sessions admin (stateless, compatibles Vercel) ----------
-// Une session ne doit pas dépendre de la mémoire d'une seule instance
-// Serverless : chaque requête peut arriver sur une instance différente.
+// ---------- Sessions admin compatibles serverless ----------
+// Une Map en mémoire ne fonctionne pas correctement sur Vercel : après le
+// login, la requête suivante peut arriver sur une autre instance.
+// Le jeton est donc auto-signé avec COOKIE_SECRET et contient son expiration.
+
 const ADMIN_SESSION_TTL_MS = 12 * 60 * 60 * 1000; // 12h
 
-function adminSigningSecret() {
+function getCookieSecret() {
+  // Ne remplace jamais une valeur fournie par l'utilisateur.
   return String(process.env.COOKIE_SECRET || 'outlaw-mordrex-cookie-secret-change-me');
 }
 
 function signAdminPayload(payload) {
-  return crypto.createHmac('sha256', adminSigningSecret()).update(payload).digest('hex');
+  return crypto.createHmac('sha256', getCookieSecret()).update(payload).digest('hex');
 }
 
 function createAdminSession() {
-  const payload = `${Date.now() + ADMIN_SESSION_TTL_MS}.${newToken()}`;
+  const payload = `${Date.now()}.${crypto.randomBytes(24).toString('hex')}`;
   return `${payload}.${signAdminPayload(payload)}`;
 }
 
@@ -113,21 +116,24 @@ function isAdminSessionValid(token) {
   if (!token) return false;
   const parts = String(token).split('.');
   if (parts.length !== 3) return false;
-  const [expires, nonce, signature] = parts;
-  const payload = `${expires}.${nonce}`;
-  if (!/^\d+$/.test(expires) || Date.now() > Number(expires)) return false;
+
+  const timestamp = Number(parts[0]);
+  const payload = `${parts[0]}.${parts[1]}`;
+  const signature = parts[2];
+
+  if (!Number.isFinite(timestamp)) return false;
+  if (Date.now() - timestamp < 0 || Date.now() - timestamp > ADMIN_SESSION_TTL_MS) return false;
+
   const expected = signAdminPayload(payload);
-  try {
-    const a = Buffer.from(signature, 'hex');
-    const b = Buffer.from(expected, 'hex');
-    return a.length === b.length && crypto.timingSafeEqual(a, b);
-  } catch (_) {
-    return false;
-  }
+  const a = Buffer.from(signature);
+  const b = Buffer.from(expected);
+  if (a.length !== b.length) return false;
+
+  return crypto.timingSafeEqual(a, b);
 }
 
 function destroyAdminSession(_token) {
-  // Session stateless : l'expiration du cookie côté navigateur suffit.
+  // Les sessions sont stateless. La déconnexion invalide le cookie côté client.
 }
 
 module.exports = {

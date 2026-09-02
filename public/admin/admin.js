@@ -47,7 +47,11 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
 });
 
 document.getElementById('logout-btn').addEventListener('click', async () => {
-  await api('/api/admin/logout', { method: 'POST' });
+  try {
+    await api('/api/admin/logout', { method: 'POST' });
+  } catch (err) {
+    // Même si le serveur répond mal, on masque immédiatement le tableau de bord.
+  }
   showLogin();
 });
 
