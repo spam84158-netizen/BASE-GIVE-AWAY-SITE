@@ -68,8 +68,8 @@ router.post(
   rateLimit({ windowMs: 5 * 60_000, max: 10, keyFn: (r) => r.ip }),
   (req, res) => {
     const { username, password } = req.body || {};
-    const validUser = String(process.env.ADMIN_USERNAME || 'admin').trim();
-    const validPass = String(process.env.ADMIN_PASSWORD || '1221');
+    const validUser = process.env.ADMIN_USERNAME || 'admin';
+    const validPass = process.env.ADMIN_PASSWORD || '';
     if (
       !validPass ||
       !timingSafeEqual(username || '', validUser) ||

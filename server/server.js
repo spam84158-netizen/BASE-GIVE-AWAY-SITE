@@ -50,11 +50,9 @@ app.get(
     if (referrer) {
       setCookie(res, 'mx_ref', code, { maxAgeSeconds: 60 * 60 * 24 * 30, httpOnly: false });
     }
-    // Le parrain est mémorisé dans le cookie avant l'inscription.
-    // On envoie ensuite directement vers le parcours public des récompenses.
-    // L'URL WhatsApp reste configurable dans l'Admin et peut être utilisée
-    // ailleurs dans l'interface, mais ne doit pas interrompre l'inscription.
-    return res.redirect('/rewards.html?ref=' + encodeURIComponent(code));
+    const url = data.settings.whatsappChannelUrl;
+    if (url) return res.redirect(url);
+    return res.redirect('/?ref=' + encodeURIComponent(code));
   }
 );
 

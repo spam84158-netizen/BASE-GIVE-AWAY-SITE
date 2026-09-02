@@ -1,35 +1,19 @@
 // api.js — utilitaires partagés par toutes les pages
 
 async function api(path, options = {}) {
-  let res;
-  try {
-    res = await fetch(path, {
-      credentials: 'same-origin',
-      headers: options.body instanceof FormData
-        ? {}
-        : { 'Content-Type': 'application/json', ...(options.headers || {}) },
-      ...options,
-    });
-  } catch (networkError) {
-    const err = new Error('Impossible de contacter le serveur. Vérifie ta connexion puis réessaie.');
-    err.cause = networkError;
-    err.status = 0;
-    throw err;
-  }
-
+  const res = await fetch(path, {
+    credentials: 'same-origin',
+    headers: options.body instanceof FormData ? {} : { 'Content-Type': 'application/json' },
+    ...options,
+  });
   let data = null;
-  try { data = await res.json(); } catch (e) { /* réponse non JSON */ }
-
+  try { data = await res.json(); } catch (e) { /* pas de corps JSON */ }
   if (!res.ok) {
-    const fallback = res.status >= 500
-      ? 'Le serveur a rencontré une erreur. Réessaie dans un instant.'
-      : 'Une erreur est survenue.';
-    const err = new Error((data && (data.message || data.error)) || fallback);
+    const err = new Error((data && (data.message || data.error)) || 'Une erreur est survenue.');
     err.data = data;
     err.status = res.status;
     throw err;
   }
-
   return data;
 }
 

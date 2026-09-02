@@ -91,49 +91,30 @@ function rateLimit({ windowMs, max, keyFn }) {
   };
 }
 
-// ---------- Sessions admin compatibles serverless ----------
-// Une Map en mémoire ne fonctionne pas correctement sur Vercel : après le
-// login, la requête suivante peut arriver sur une autre instance.
-// Le jeton est donc auto-signé avec COOKIE_SECRET et contient son expiration.
+// ---------- Sessions admin (en mémoire, simples) ----------
 
+const adminSessions = new Map(); // token -> expiry timestamp
 const ADMIN_SESSION_TTL_MS = 12 * 60 * 60 * 1000; // 12h
 
-function getCookieSecret() {
-  // Ne remplace jamais une valeur fournie par l'utilisateur.
-  return String(process.env.COOKIE_SECRET || 'outlaw-mordrex-cookie-secret-change-me');
-}
-
-function signAdminPayload(payload) {
-  return crypto.createHmac('sha256', getCookieSecret()).update(payload).digest('hex');
-}
-
 function createAdminSession() {
-  const payload = `${Date.now()}.${crypto.randomBytes(24).toString('hex')}`;
-  return `${payload}.${signAdminPayload(payload)}`;
+  const token = newToken();
+  adminSessions.set(token, Date.now() + ADMIN_SESSION_TTL_MS);
+  return token;
 }
 
 function isAdminSessionValid(token) {
   if (!token) return false;
-  const parts = String(token).split('.');
-  if (parts.length !== 3) return false;
-
-  const timestamp = Number(parts[0]);
-  const payload = `${parts[0]}.${parts[1]}`;
-  const signature = parts[2];
-
-  if (!Number.isFinite(timestamp)) return false;
-  if (Date.now() - timestamp < 0 || Date.now() - timestamp > ADMIN_SESSION_TTL_MS) return false;
-
-  const expected = signAdminPayload(payload);
-  const a = Buffer.from(signature);
-  const b = Buffer.from(expected);
-  if (a.length !== b.length) return false;
-
-  return crypto.timingSafeEqual(a, b);
+  const expiry = adminSessions.get(token);
+  if (!expiry) return false;
+  if (Date.now() > expiry) {
+    adminSessions.delete(token);
+    return false;
+  }
+  return true;
 }
 
-function destroyAdminSession(_token) {
-  // Les sessions sont stateless. La déconnexion invalide le cookie côté client.
+function destroyAdminSession(token) {
+  adminSessions.delete(token);
 }
 
 module.exports = {
